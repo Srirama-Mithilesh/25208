@@ -1,0 +1,5 @@
+{
+  "name": "SAIL Rake Formation DSS",
+  "description": "A modern, responsive web application for an AI/ML-based Decision Support System (DSS) for Rake Formation for the Steel Authority of India (SAIL). This prototype includes features for order and inventory management, role-based access control, a dashboard with KPIs, and a rake formation planner with simulation capabilities.",
+  "requestFramePermissions": []
+}

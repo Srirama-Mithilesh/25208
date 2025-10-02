@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SAIL Rake Formation DSS</title>
+
+    <!-- ES Module Shims for robust module loading -->
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+
+    <!-- Define import map before other scripts that need it -->
+    <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@18.3.1/",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.23.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.378.0",
+    "recharts": "https://esm.sh/recharts@2.12.7",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- MapMyIndia GL JS and CSS -->
+    <link rel="stylesheet" href="https://apis.mapmyindia.com/mmi-gl/v2.0/mapmyindia-gl.css">
+    <script src="https://apis.mapmyindia.com/mmi-gl/v2.0/mapmyindia-gl.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              body: ['Roboto', 'sans-serif'],
+            },
+            colors: {
+              'sail-blue': '#003366',
+              'sail-orange': '#FF6600',
+              'primary': '#003366',
+              'secondary': '#FF6600',
+              'light-gray': '#f4f7fa',
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- Add Babel AFTER the import map -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+  <body class="bg-light-gray">
+    <div id="root"></div>
+    <script type="text/babel" data-presets="react,typescript" data-type="module" src="/index.tsx"></script>
+  </body>
+</html>
