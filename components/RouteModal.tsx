@@ -40,11 +40,26 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
     }
 
     let isMounted = true;
-    
+    let loadCheckInterval: NodeJS.Timeout;
+
     const initializeMap = () => {
         try {
             if (typeof mapmyindia === 'undefined' || typeof mapmyindia.Map === 'undefined') {
-                throw new Error('MapMyIndia library not loaded.');
+                setMapStatus('loading');
+                loadCheckInterval = setInterval(() => {
+                    if (typeof mapmyindia !== 'undefined' && typeof mapmyindia.Map !== 'undefined') {
+                        clearInterval(loadCheckInterval);
+                        initializeMap();
+                    }
+                }, 100);
+                setTimeout(() => {
+                    clearInterval(loadCheckInterval);
+                    if (typeof mapmyindia === 'undefined' || typeof mapmyindia.Map === 'undefined') {
+                        setErrorMessage('MapMyIndia library not loaded.');
+                        setMapStatus('error');
+                    }
+                }, 5000);
+                return;
             }
 
             const origin = { lat: source.lat, lng: source.lon };
@@ -129,6 +144,9 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
 
     return () => {
         isMounted = false;
+        if (loadCheckInterval) {
+            clearInterval(loadCheckInterval);
+        }
         if (mapInstanceRef.current) {
             mapInstanceRef.current.remove();
             mapInstanceRef.current = null;
