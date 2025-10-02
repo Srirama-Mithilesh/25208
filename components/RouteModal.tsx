@@ -90,17 +90,14 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
                     map.fitBounds(bounds, { padding: 80 });
                 };
 
-                let apiKey: string | undefined;
-                if (typeof process !== 'undefined' && process.env) {
-                  apiKey = process.env.API_KEY;
-                }
+                const apiKey = import.meta.env.VITE_MAPMYINDIA_API_KEY;
 
-                if (!apiKey) {
+                if (!apiKey || apiKey === 'your_mapmyindia_api_key_here') {
                     setErrorMessage('API key not configured. Showing simulated straight-line route.');
                     drawRoute([[origin.lng, origin.lat], [destination.lng, destination.lat]], true);
                     return;
                 }
-                
+
                 const routeUrl = `https://apis.mapmyindia.com/advancedmaps/v1/${apiKey}/route_adv/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?geometries=geojson`;
                 fetch(routeUrl)
                     .then(response => response.json())
