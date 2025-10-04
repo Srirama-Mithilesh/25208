@@ -22,6 +22,7 @@ export interface Order {
   dueDate: string;
   destination: string;
   status: 'Pending' | 'Delivered';
+  assignedManagerId?: number;
 }
 
 export interface InventoryItem {
@@ -53,6 +54,12 @@ export interface RakeSuggestion {
     slaCompliance: number; // percentage
     utilization: number; // percentage
     fulfilledOrderIds: string[];
+    // New fields for live tracking
+    status: 'suggested' | 'dispatched' | 'arrived';
+    dispatchTime?: number; // timestamp
+    progress?: number; // 0 to 1
+    currentLat?: number;
+    currentLon?: number;
 }
 
 export interface Notification {

@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useState, useMemo, FC, ChangeEvent } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Order, Role } from '../types';
@@ -6,17 +6,19 @@ import { Upload, Search, Truck, BrainCircuit } from 'lucide-react';
 
 declare const XLSX: any;
 
-const OrdersPage: React.FC = () => {
-  const { orders, addOrders, updateOrderStatus, updateOrderPriority, autoUpdatePriorities } = useData();
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [priorityFilter, setPriorityFilter] = React.useState('All');
-  const [fileName, setFileName] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState<'Pending' | 'Delivered'>('Pending');
+const OrdersPage: FC = () => {
+  const { orders, addOrders, updateOrderStatus, updateOrderPriority, autoUpdatePriorities, updateOrderAssignedManager } = useData();
+  const { user, users } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [fileName, setFileName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'Pending' | 'Delivered'>('Pending');
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const baseManagers = users.filter(u => u.role === Role.BASE_MANAGER);
+
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -83,7 +85,7 @@ const OrdersPage: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
   
-  const filteredOrders = React.useMemo(() => {
+  const filteredOrders = useMemo(() => {
     return orders.filter(order => {
       const matchesSearch = Object.values(order).some(val =>
         val.toString().toLowerCase().includes(searchTerm.toLowerCase())
@@ -171,55 +173,74 @@ const OrdersPage: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                 <tr>
-                    {['Order ID', 'Customer', 'Product', 'Quantity (T)', 'Priority', 'Due Date', 'Destination', 'Actions'].map(header => (
+                    {['Order ID', 'Customer', 'Product', 'Quantity (T)', 'Priority', 'Due Date', 'Destination', 'Assigned Manager', 'Actions'].map(header => (
                     <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{header}</th>
                     ))}
                 </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOrders.map(order => (
-                    <tr key={order.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.customerName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.product}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.quantity.toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {activeTab === 'Pending' && user?.role === Role.ADMIN ? (
-                          <select
-                              value={order.priority}
-                              onChange={(e) => updateOrderPriority(order.id, e.target.value as 'High' | 'Medium' | 'Low')}
-                              className={`w-full p-1 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-sail-orange font-semibold text-xs ${
-                                  order.priority === 'High' ? 'bg-red-100 text-red-800' :
-                                  order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-green-100 text-green-800'
-                              }`}
-                          >
-                              <option value="High">High</option>
-                              <option value="Medium">Medium</option>
-                              <option value="Low">Low</option>
-                          </select>
-                        ) : (
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          order.priority === 'High' ? 'bg-red-100 text-red-800' :
-                          order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                          }`}>
-                          {order.priority}
-                          </span>
-                        )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.dueDate}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.destination}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        {activeTab === 'Pending' && user?.role === Role.ADMIN && (
-                            <button onClick={() => updateOrderStatus(order.id, 'Delivered')} title="Mark as Delivered" className="text-green-600 hover:text-green-900"><Truck size={18} /></button>
-                        )}
-                        {activeTab === 'Delivered' && user?.role === Role.ADMIN && (
-                            <button onClick={() => updateOrderStatus(order.id, 'Pending')} title="Move to Pending" className="text-yellow-600 hover:text-yellow-900">Undo</button>
-                        )}
-                    </td>
-                    </tr>
-                ))}
+                {filteredOrders.map(order => {
+                    const assignedManager = users.find(u => u.id === order.assignedManagerId);
+                    return (
+                        <tr key={order.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.id}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.customerName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.product}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.quantity.toLocaleString()}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {activeTab === 'Pending' && user?.role === Role.ADMIN ? (
+                              <select
+                                  value={order.priority}
+                                  onChange={(e) => updateOrderPriority(order.id, e.target.value as 'High' | 'Medium' | 'Low')}
+                                  className={`w-full p-1 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-sail-orange font-semibold text-xs ${
+                                      order.priority === 'High' ? 'bg-red-100 text-red-800' :
+                                      order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-green-100 text-green-800'
+                                  }`}
+                              >
+                                  <option value="High">High</option>
+                                  <option value="Medium">Medium</option>
+                                  <option value="Low">Low</option>
+                              </select>
+                            ) : (
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              order.priority === 'High' ? 'bg-red-100 text-red-800' :
+                              order.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                              }`}>
+                              {order.priority}
+                              </span>
+                            )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.dueDate}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.destination}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 min-w-[180px]">
+                            {activeTab === 'Pending' && user?.role === Role.ADMIN ? (
+                                <select
+                                    value={order.assignedManagerId || ''}
+                                    onChange={(e) => updateOrderAssignedManager(order.id, e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full p-1 rounded-md border-gray-300 focus:outline-none focus:ring-2 focus:ring-sail-orange text-xs"
+                                >
+                                    <option value="">Unassigned</option>
+                                    {baseManagers.map(manager => (
+                                        <option key={manager.id} value={manager.id}>{manager.name}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                assignedManager?.name || 'Unassigned'
+                            )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            {activeTab === 'Pending' && user?.role === Role.ADMIN && (
+                                <button onClick={() => updateOrderStatus(order.id, 'Delivered')} title="Mark as Delivered" className="text-green-600 hover:text-green-900"><Truck size={18} /></button>
+                            )}
+                            {activeTab === 'Delivered' && user?.role === Role.ADMIN && (
+                                <button onClick={() => updateOrderStatus(order.id, 'Pending')} title="Move to Pending" className="text-yellow-600 hover:text-yellow-900">Undo</button>
+                            )}
+                        </td>
+                        </tr>
+                    );
+                })}
                 </tbody>
             </table>
             </div>

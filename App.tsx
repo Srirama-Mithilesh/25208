@@ -1,7 +1,8 @@
-import * as React from 'react';
+import { FC, ReactElement } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import OrdersPage from './pages/OrdersPage';
@@ -13,7 +14,7 @@ import Layout from './components/Layout';
 import { Role } from './types';
 import LogisticsMapPage from './pages/LogisticsMapPage';
 
-const ProtectedRoute: React.FC<{ children: React.ReactElement; roles?: Role[] }> = ({ children, roles }) => {
+const ProtectedRoute: FC<{ children: ReactElement; roles?: Role[] }> = ({ children, roles }) => {
   const { user } = useAuth();
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -26,7 +27,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement; roles?: Role[] }>
   return children;
 };
 
-const AppRoutes: React.FC = () => {
+const AppRoutes: FC = () => {
     const { user } = useAuth();
 
     if (!user) {
@@ -58,13 +59,15 @@ const AppRoutes: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-        <DataProvider>
-            <HashRouter>
-                <AppRoutes />
-            </HashRouter>
-        </DataProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+          <DataProvider>
+              <HashRouter>
+                  <AppRoutes />
+              </HashRouter>
+          </DataProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

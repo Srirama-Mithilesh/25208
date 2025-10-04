@@ -1,8 +1,6 @@
-import * as React from 'react';
+import { useState, useEffect, FC } from 'react';
 import { X, Loader2, Lightbulb } from 'lucide-react';
 import { RakeSuggestion, Order, Inventory } from '../types';
-// FIX: The file was missing. I will create its content based on the application's context.
-// This component should provide an AI-generated explanation for a given rake plan.
 import { GoogleGenAI } from "@google/genai";
 
 interface ExplainabilityModalProps {
@@ -12,12 +10,12 @@ interface ExplainabilityModalProps {
   onClose: () => void;
 }
 
-const ExplainabilityModal: React.FC<ExplainabilityModalProps> = ({ plan, orders, inventories, onClose }) => {
-  const [explanation, setExplanation] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
+const ExplainabilityModal: FC<ExplainabilityModalProps> = ({ plan, orders, inventories, onClose }) => {
+  const [explanation, setExplanation] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchExplanation = async () => {
       setIsLoading(true);
       setError('');
@@ -66,16 +64,13 @@ const ExplainabilityModal: React.FC<ExplainabilityModalProps> = ({ plan, orders,
       `;
 
       try {
-        // FIX: Use the GoogleGenAI constructor with the apiKey option.
         const ai = new GoogleGenAI({apiKey: apiKey});
         
-        // FIX: Use ai.models.generateContent instead of deprecated methods.
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
 
-        // FIX: Access the response text directly from the response object.
         setExplanation(response.text);
 
       } catch (e) {
@@ -112,7 +107,7 @@ const ExplainabilityModal: React.FC<ExplainabilityModalProps> = ({ plan, orders,
                 elements.push(<div key={`div-${i}`} className="h-4"></div>);
             } else if (line.includes('**')) {
                 const parts = line.split('**');
-                elements.push(<p key={`p-${i}`} className="font-bold text-gray-800 my-2">{parts[1]}</p>);
+                elements.push(<p key={`p-${i}`} className="font-bold text-gray-800 dark:text-gray-200 my-2">{parts[1]}</p>);
             } else {
                 elements.push(<p key={`p-${i}`}>{line}</p>);
             }
@@ -125,13 +120,13 @@ const ExplainabilityModal: React.FC<ExplainabilityModalProps> = ({ plan, orders,
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-4 border-b">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
           <div className="flex items-center gap-2">
             <Lightbulb className="text-sail-orange" size={24}/>
-            <h2 className="text-xl font-bold text-gray-800">Plan Explanation: {plan.rakeId}</h2>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Plan Explanation: {plan.rakeId}</h2>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100">
             <X size={24} />
           </button>
         </div>
@@ -140,7 +135,7 @@ const ExplainabilityModal: React.FC<ExplainabilityModalProps> = ({ plan, orders,
           {isLoading && (
             <div className="flex flex-col items-center justify-center h-48">
               <Loader2 className="animate-spin text-sail-orange h-12 w-12" />
-              <p className="mt-4 text-gray-600">Generating insights...</p>
+              <p className="mt-4 text-gray-600 dark:text-gray-300">Generating insights...</p>
             </div>
           )}
           {error && (
@@ -150,13 +145,13 @@ const ExplainabilityModal: React.FC<ExplainabilityModalProps> = ({ plan, orders,
             </div>
           )}
           {!isLoading && !error && (
-            <div className="prose prose-sm max-w-none text-gray-600 space-y-2">
+            <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 space-y-2">
               {formatExplanation(explanation)}
             </div>
           )}
         </div>
         
-        <div className="p-4 bg-gray-50 border-t text-right">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700 border-t dark:border-gray-600 text-right">
           <button onClick={onClose} className="px-4 py-2 bg-sail-blue text-white rounded-md hover:bg-blue-800">
             Close
           </button>

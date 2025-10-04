@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useRef, useState, useEffect, FC } from 'react';
 import { X, MapPin, Truck, Clock } from 'lucide-react';
 import { RakeSuggestion, Inventory } from '../types';
 import { MOCK_DESTINATIONS } from '../constants';
@@ -24,17 +24,17 @@ interface RouteModalProps {
   onClose: () => void;
 }
 
-const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
-  const mapContainerRef = React.useRef<HTMLDivElement>(null);
-  const mapInstanceRef = React.useRef<any>(null);
+const RouteModal: FC<RouteModalProps> = ({ plan, source, onClose }) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
   const destCoords = MOCK_DESTINATIONS[plan.destination];
   const distance = destCoords ? getDistance(source.lat, source.lon, destCoords.lat, destCoords.lon) : 0;
   const estimatedTime = Math.round(distance / 50); // Assuming avg speed of 50km/h for rail
   
-  const [mapStatus, setMapStatus] = React.useState<'loading' | 'loaded' | 'error'>('loading');
-  const [errorMessage, setErrorMessage] = React.useState('');
+  const [mapStatus, setMapStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!mapContainerRef.current || !destCoords || mapInstanceRef.current) {
       return;
     }
@@ -151,53 +151,53 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold text-gray-800">Route Simulation: {plan.rakeId}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Route Simulation: {plan.rakeId}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100">
             <X size={24} />
           </button>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="font-semibold text-gray-700 mb-3">Route Details</h3>
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3">Route Details</h3>
               <div className="space-y-3">
                 <div className="flex items-start">
                   <MapPin size={20} className="text-green-600 mt-1 mr-3 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500">Origin</p>
-                    <p className="font-medium text-gray-800">{source.baseName}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Origin</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">{source.baseName}</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <MapPin size={20} className="text-red-600 mt-1 mr-3 flex-shrink-0" />
                    <div>
-                    <p className="text-xs text-gray-500">Destination</p>
-                    <p className="font-medium text-gray-800">{plan.destination}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Destination</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">{plan.destination}</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <Truck size={20} className="text-blue-600 mt-1 mr-3 flex-shrink-0" />
                    <div>
-                    <p className="text-xs text-gray-500">Estimated Distance</p>
-                    <p className="font-medium text-gray-800">{Math.round(distance).toLocaleString()} km</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Estimated Distance</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">{Math.round(distance).toLocaleString()} km</p>
                   </div>
                 </div>
                 <div className="flex items-start">
                   <Clock size={20} className="text-orange-600 mt-1 mr-3 flex-shrink-0" />
                    <div>
-                    <p className="text-xs text-gray-500">Estimated Travel Time</p>
-                    <p className="font-medium text-gray-800">~{estimatedTime} hours</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Estimated Travel Time</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-200">~{estimatedTime} hours</p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="relative bg-gray-200 rounded-lg h-64 md:h-auto min-h-[250px]">
+            <div className="relative bg-gray-200 dark:bg-gray-700 rounded-lg h-64 md:h-auto min-h-[250px]">
                 <div ref={mapContainerRef} className="absolute inset-0"></div>
                 {(mapStatus !== 'loaded' || errorMessage) && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200 bg-opacity-80 p-4 pointer-events-none">
-                        {mapStatus === 'loading' && <p className="text-gray-500">Loading map...</p>}
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700 bg-opacity-80 dark:bg-opacity-80 p-4 pointer-events-none">
+                        {mapStatus === 'loading' && <p className="text-gray-500 dark:text-gray-300">Loading map...</p>}
                         {mapStatus === 'error' && <p className="text-red-600 text-center text-sm font-medium">{errorMessage}</p>}
                         {mapStatus === 'loaded' && errorMessage && 
                             <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 text-center text-xs font-medium" role="alert">
@@ -209,7 +209,7 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
             </div>
           </div>
         </div>
-        <div className="p-4 bg-gray-50 border-t text-right">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700 border-t dark:border-gray-600 text-right">
              <button onClick={onClose} className="px-4 py-2 bg-sail-orange text-white rounded-md hover:bg-orange-700">
                 Close
             </button>

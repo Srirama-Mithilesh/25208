@@ -1,6 +1,6 @@
-import * as React from 'react';
+import { useState, FC } from 'react';
 import { useData } from '../context/DataContext';
-import { BrainCircuit, Loader2, Info, Map, CheckCircle, Beaker } from 'lucide-react';
+import { BrainCircuit, Loader2, Info, Map, CheckCircle, Beaker, Send } from 'lucide-react';
 import { RakeSuggestion, Order, Inventory } from '../types';
 import { GoogleGenAI, Type } from "@google/genai";
 import RouteModal from '../components/RouteModal';
@@ -11,16 +11,17 @@ export interface SimulationParams {
   rakeCapacity?: number;
   priorityWeighting?: string; 
   highPriorityProduct?: string;
+  specificOrderIds?: string;
 }
 
-const PlannerPage: React.FC = () => {
-  const { orders, inventories, rakePlans, setRakePlans, updateOrderStatus, addNotification } = useData();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
+const PlannerPage: FC = () => {
+  const { orders, inventories, rakePlans, setRakePlans, dispatchRake, addNotification } = useData();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const [selectedPlanForRoute, setSelectedPlanForRoute] = React.useState<RakeSuggestion | null>(null);
-  const [selectedPlanForExplanation, setSelectedPlanForExplanation] = React.useState<RakeSuggestion | null>(null);
-  const [isSimulationModalOpen, setIsSimulationModalOpen] = React.useState(false);
+  const [selectedPlanForRoute, setSelectedPlanForRoute] = useState<RakeSuggestion | null>(null);
+  const [selectedPlanForExplanation, setSelectedPlanForExplanation] = useState<RakeSuggestion | null>(null);
+  const [isSimulationModalOpen, setIsSimulationModalOpen] = useState(false);
 
   const pendingOrders = orders.filter(o => o.status === 'Pending');
 
@@ -36,7 +37,7 @@ const PlannerPage: React.FC = () => {
         return;
     }
     
-    const { rakeCapacity = 4000, priorityWeighting = 'balanced', highPriorityProduct } = simulationParams;
+    const { rakeCapacity = 4000, priorityWeighting = 'balanced', highPriorityProduct, specificOrderIds } = simulationParams;
 
     // Construct the prompt for the Gemini API
     const prompt = `
@@ -46,6 +47,7 @@ const PlannerPage: React.FC = () => {
       - A standard rake has a capacity of approximately ${rakeCapacity} tons.
       - Planning Strategy: ${priorityWeighting === 'high_priority_focus' ? 'Strongly prioritize orders with \'High\' priority, even if it results in lower rake utilization.' : 'Balance fulfilling high-priority orders with achieving high rake utilization.'}
       ${highPriorityProduct ? `- Give special consideration to fulfilling orders for the product: ${highPriorityProduct}.` : ''}
+      ${specificOrderIds ? `- A user has requested that you prioritize including these specific Order IDs in your plan: ${specificOrderIds}. Please try to include them if feasible.` : ''}
       - Aim for high rake utilization (close to 100%) but do not exceed capacity.
       - Fulfill multiple orders in a single rake if they have the same destination and fit within capacity.
       - Consider inventory levels at each base. A plan is only viable if the base has enough stock.
@@ -116,17 +118,19 @@ const PlannerPage: React.FC = () => {
       });
       
       const jsonResponse = response.text.trim();
-      const parsedPlans: RakeSuggestion[] = JSON.parse(jsonResponse);
+      let parsedPlans: Omit<RakeSuggestion, 'status'>[] = JSON.parse(jsonResponse);
       
       if (!Array.isArray(parsedPlans)) {
         throw new Error("AI response was not a valid array of plans.");
       }
+
+      const plansWithStatus: RakeSuggestion[] = parsedPlans.map(p => ({...p, status: 'suggested' }));
       
-      setRakePlans(parsedPlans);
+      setRakePlans(plansWithStatus);
 
       // Add a notification for plan generation
-      if (parsedPlans.length > 0) {
-        const message = simulationParams.rakeCapacity ? `Generated ${parsedPlans.length} new rake suggestions based on simulation.` : `Generated ${parsedPlans.length} new rake suggestions.`;
+      if (plansWithStatus.length > 0) {
+        const message = simulationParams.rakeCapacity || simulationParams.specificOrderIds ? `Generated ${plansWithStatus.length} new rake suggestions based on simulation.` : `Generated ${plansWithStatus.length} new rake suggestions.`;
         addNotification(message, 0); // 0 for system/all bases
       }
 
@@ -138,17 +142,25 @@ const PlannerPage: React.FC = () => {
     }
   };
   
-  const handleApprovePlan = (plan: RakeSuggestion) => {
-    // This is a simulation. In a real app, this would trigger a workflow.
-    plan.fulfilledOrderIds.forEach(orderId => {
-      updateOrderStatus(orderId, 'Delivered');
-    });
-    addNotification(`Rake plan ${plan.rakeId} approved and dispatched.`, inventories.find(inv => inv.baseName === plan.base)?.baseId || 0);
+  const handleDispatchPlan = (plan: RakeSuggestion) => {
+    dispatchRake(plan.rakeId);
+    addNotification(`Rake plan ${plan.rakeId} has been dispatched from ${plan.base}.`, inventories.find(inv => inv.baseName === plan.base)?.baseId || 0);
   };
 
   const getSourceForPlan = (plan: RakeSuggestion): Inventory | undefined => {
       return inventories.find(inv => inv.baseName === plan.base);
   }
+
+  const getStatusChip = (status: RakeSuggestion['status']) => {
+    switch (status) {
+        case 'dispatched':
+            return <span className="text-xs font-bold uppercase text-blue-600">In Transit</span>;
+        case 'arrived':
+            return <span className="text-xs font-bold uppercase text-green-600">Arrived</span>;
+        default:
+            return <span className="text-xs font-bold uppercase text-gray-500">Suggested</span>;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -203,10 +215,13 @@ const PlannerPage: React.FC = () => {
           </div>
         ) : (
           rakePlans.map(plan => (
-            <div key={plan.rakeId} className="bg-white p-4 rounded-lg shadow-md border-l-4 border-sail-blue">
+            <div key={plan.rakeId} className={`bg-white p-4 rounded-lg shadow-md border-l-4 ${plan.status === 'dispatched' ? 'border-blue-500' : plan.status === 'arrived' ? 'border-green-500' : 'border-sail-blue'}`}>
               <div className="flex flex-col md:flex-row justify-between md:items-center">
                 <div className="flex-1 mb-4 md:mb-0">
-                  <h3 className="font-bold text-lg text-sail-blue">{plan.rakeId}</h3>
+                  <div className="flex items-center gap-4">
+                    <h3 className="font-bold text-lg text-sail-blue">{plan.rakeId}</h3>
+                    {getStatusChip(plan.status)}
+                  </div>
                   <p className="text-sm text-gray-600">{plan.base} &rarr; {plan.destination}</p>
                    <div className="mt-2 text-xs">
                     {plan.products.map(p => (
@@ -241,8 +256,13 @@ const PlannerPage: React.FC = () => {
                 <button onClick={() => setSelectedPlanForRoute(plan)} className="text-sm flex items-center text-gray-600 hover:text-sail-blue">
                   <Map size={16} className="mr-1"/> View Route
                 </button>
-                <button onClick={() => handleApprovePlan(plan)} className="text-sm flex items-center px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700">
-                  <CheckCircle size={16} className="mr-1"/> Approve & Dispatch
+                <button 
+                  onClick={() => handleDispatchPlan(plan)}
+                  disabled={plan.status !== 'suggested'}
+                  className="text-sm flex items-center px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {plan.status === 'suggested' ? <Send size={16} className="mr-1"/> : <CheckCircle size={16} className="mr-1"/>}
+                  {plan.status === 'suggested' ? 'Dispatch' : plan.status === 'dispatched' ? 'In Transit' : 'Arrived'}
                 </button>
               </div>
             </div>

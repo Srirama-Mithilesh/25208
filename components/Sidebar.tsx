@@ -1,5 +1,4 @@
-
-import * as React from 'react';
+import { FC } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ShoppingCart, Warehouse, Train, BarChart2, Settings, X, Sailboat, Map } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +9,7 @@ interface SidebarProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
+const Sidebar: FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const { user } = useAuth();
   const location = useLocation();
 

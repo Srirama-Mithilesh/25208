@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { StrictMode } from 'react';
 // For React 18, `createRoot` is imported from `react-dom/client`.
 import { createRoot } from 'react-dom/client';
 import App from './App';
@@ -10,7 +10,7 @@ if (!rootElement) {
 
 const root = createRoot(rootElement);
 root.render(
-  <React.StrictMode>
+  <StrictMode>
     <App />
-  </React.StrictMode>
+  </StrictMode>
 );
