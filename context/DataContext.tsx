@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
-import { Order, Inventory, InventoryItem, InventoryUpdate, Notification, RakeSuggestion } from '../types';
+import * as React from 'react';
+import { Order, Inventory, InventoryItem, InventoryUpdate, Notification, RakeSuggestion, Role } from '../types';
 import { MOCK_ORDERS, MOCK_INVENTORY } from '../constants';
 import { useAuth } from './AuthContext';
 
@@ -16,16 +16,17 @@ interface DataContextType {
   autoUpdatePriorities: () => void;
   addNotification: (message: string, baseId: number) => void;
   markNotificationAsRead: (notificationId: string) => void;
+  markAllAsRead: () => void;
 }
 
-const DataContext = createContext<DataContextType | undefined>(undefined);
+const DataContext = React.createContext<DataContextType | undefined>(undefined);
 
-export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
-  const [inventories, setInventories] = useState<Inventory[]>(MOCK_INVENTORY);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [rakePlans, setRakePlans] = useState<RakeSuggestion[]>([]);
+  const [orders, setOrders] = React.useState<Order[]>(MOCK_ORDERS);
+  const [inventories, setInventories] = React.useState<Inventory[]>(MOCK_INVENTORY);
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [rakePlans, setRakePlans] = React.useState<RakeSuggestion[]>([]);
 
   const addOrders = (newOrders: Order[]) => {
     setOrders(prevOrders => [...prevOrders, ...newOrders]);
@@ -80,8 +81,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
   };
 
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(n => {
+        if (!user) return n;
+        let shouldMark = false;
+        
+        if (user.role === Role.ADMIN) {
+          shouldMark = true;
+        } else if (user.role === Role.BASE_MANAGER && n.baseId === user.baseId) {
+          shouldMark = true;
+        }
 
-  const updateInventory = useCallback((baseId: number, updates: { productName: string; newQuantity: number }[]) => {
+        if (shouldMark && !n.read) {
+          return { ...n, read: true };
+        }
+        return n;
+      })
+    );
+  };
+
+
+  const updateInventory = React.useCallback((baseId: number, updates: { productName: string; newQuantity: number }[]) => {
     if (!user) return;
     
     setInventories(prevInventories => {
@@ -115,14 +136,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user]);
 
   return (
-    <DataContext.Provider value={{ orders, inventories, notifications, rakePlans, setRakePlans, addOrders, updateInventory, updateOrderStatus, addNotification, markNotificationAsRead, updateOrderPriority, autoUpdatePriorities }}>
+    <DataContext.Provider value={{ orders, inventories, notifications, rakePlans, setRakePlans, addOrders, updateInventory, updateOrderStatus, addNotification, markNotificationAsRead, updateOrderPriority, autoUpdatePriorities, markAllAsRead }}>
       {children}
     </DataContext.Provider>
   );
 };
 
 export const useData = (): DataContextType => {
-  const context = useContext(DataContext);
+  const context = React.useContext(DataContext);
   if (!context) {
     throw new Error('useData must be used within a DataProvider');
   }

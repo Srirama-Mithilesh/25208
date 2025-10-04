@@ -1,5 +1,5 @@
 
-import React from 'react';
+import * as React from 'react';
 import KpiCard from '../components/KpiCard';
 import { useData } from '../context/DataContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import * as React from 'react';
 import { X, MapPin, Truck, Clock } from 'lucide-react';
 import { RakeSuggestion, Inventory } from '../types';
 import { MOCK_DESTINATIONS } from '../constants';
@@ -25,41 +25,26 @@ interface RouteModalProps {
 }
 
 const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+  const mapInstanceRef = React.useRef<any>(null);
   const destCoords = MOCK_DESTINATIONS[plan.destination];
   const distance = destCoords ? getDistance(source.lat, source.lon, destCoords.lat, destCoords.lon) : 0;
   const estimatedTime = Math.round(distance / 50); // Assuming avg speed of 50km/h for rail
   
-  const [mapStatus, setMapStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [mapStatus, setMapStatus] = React.useState<'loading' | 'loaded' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = React.useState('');
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!mapContainerRef.current || !destCoords || mapInstanceRef.current) {
       return;
     }
 
     let isMounted = true;
-    let loadCheckInterval: NodeJS.Timeout;
-
+    
     const initializeMap = () => {
         try {
             if (typeof mapmyindia === 'undefined' || typeof mapmyindia.Map === 'undefined') {
-                setMapStatus('loading');
-                loadCheckInterval = setInterval(() => {
-                    if (typeof mapmyindia !== 'undefined' && typeof mapmyindia.Map !== 'undefined') {
-                        clearInterval(loadCheckInterval);
-                        initializeMap();
-                    }
-                }, 100);
-                setTimeout(() => {
-                    clearInterval(loadCheckInterval);
-                    if (typeof mapmyindia === 'undefined' || typeof mapmyindia.Map === 'undefined') {
-                        setErrorMessage('MapMyIndia library not loaded.');
-                        setMapStatus('error');
-                    }
-                }, 5000);
-                return;
+                throw new Error('MapMyIndia library not loaded.');
             }
 
             const origin = { lat: source.lat, lng: source.lon };
@@ -76,10 +61,11 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
 
                 setMapStatus('loaded');
                 
-                // Add markers
+                // Add markers for origin and destination
                 new mapmyindia.Marker({ position: [origin.lat, origin.lng], map: map, title: source.baseName });
                 new mapmyindia.Marker({ position: [destination.lat, destination.lng], map: map, title: plan.destination });
 
+                // Helper function to draw the route on the map
                 const drawRoute = (coordinates: number[][], isSimulated: boolean) => {
                     if (!mapInstanceRef.current) return;
                     if (map.getSource('route')) {
@@ -96,23 +82,32 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
                         source: 'route',
                         layout: { 'line-join': 'round', 'line-cap': 'round' },
                         paint: isSimulated ? 
+                            // Style for simulated (straight) line
                             { 'line-color': '#0077B6', 'line-width': 4, 'line-dasharray': [2, 2] } :
+                            // Style for actual API route
                             { 'line-color': '#FF6600', 'line-width': 5 }
                     });
+                    // Fit map to the route bounds
                     const bounds = coordinates.reduce((bounds, coord) => {
                         return bounds.extend(coord);
                     }, new mapmyindia.LngLatBounds(coordinates[0], coordinates[0]));
                     map.fitBounds(bounds, { padding: 80 });
                 };
 
-                const apiKey = import.meta.env.VITE_MAPMYINDIA_API_KEY;
-
-                if (!apiKey || apiKey === 'your_mapmyindia_api_key_here') {
+                // Check for the MapMyIndia API Key from environment variables
+                let apiKey: string | undefined;
+                if (typeof process !== 'undefined' && process.env) {
+                  apiKey = process.env.API_KEY;
+                }
+                
+                // If no API key, show a message and draw a simulated straight line
+                if (!apiKey) {
                     setErrorMessage('API key not configured. Showing simulated straight-line route.');
                     drawRoute([[origin.lng, origin.lat], [destination.lng, destination.lat]], true);
                     return;
                 }
-
+                
+                // If API key is present, fetch the actual route
                 const routeUrl = `https://apis.mapmyindia.com/advancedmaps/v1/${apiKey}/route_adv/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?geometries=geojson`;
                 fetch(routeUrl)
                     .then(response => response.json())
@@ -124,6 +119,7 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
                         }
                     })
                     .catch(error => {
+                        // If fetching fails, show an error and fall back to the simulated route
                         if (isMounted) {
                             console.error('Error fetching MapMyIndia route:', error);
                             setErrorMessage('Could not fetch route. Showing simulated straight-line route.');
@@ -142,11 +138,9 @@ const RouteModal: React.FC<RouteModalProps> = ({ plan, source, onClose }) => {
 
     initializeMap();
 
+    // Cleanup function to remove the map instance when the modal closes
     return () => {
         isMounted = false;
-        if (loadCheckInterval) {
-            clearInterval(loadCheckInterval);
-        }
         if (mapInstanceRef.current) {
             mapInstanceRef.current.remove();
             mapInstanceRef.current = null;

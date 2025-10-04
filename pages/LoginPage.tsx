@@ -1,14 +1,14 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Sailboat, User, Lock } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
   const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import * as React from 'react';
 import { User, Bell, Shield } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {

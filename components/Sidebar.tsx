@@ -1,7 +1,7 @@
 
-import React from 'react';
+import * as React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Warehouse, Train, BarChart2, Settings, X, Sailboat } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Warehouse, Train, BarChart2, Settings, X, Sailboat, Map } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Role } from '../types';
 
@@ -19,6 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { to: '/orders', icon: ShoppingCart, text: 'Orders', roles: [Role.ADMIN] },
     { to: '/inventory', icon: Warehouse, text: 'Inventories', roles: [Role.ADMIN, Role.BASE_MANAGER] },
     { to: '/planner', icon: Train, text: 'Planner', roles: [Role.ADMIN, Role.BASE_MANAGER] },
+    { to: '/map', icon: Map, text: 'Logistics Map', roles: [Role.ADMIN, Role.BASE_MANAGER] },
     { to: '/reports', icon: BarChart2, text: 'Reports', roles: [Role.ADMIN, Role.BASE_MANAGER] },
     { to: '/settings', icon: Settings, text: 'Settings', roles: [Role.ADMIN, Role.BASE_MANAGER] },
   ];

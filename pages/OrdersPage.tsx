@@ -1,4 +1,4 @@
-import React, { useState, useMemo, ChangeEvent } from 'react';
+import * as React from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Order, Role } from '../types';
@@ -9,14 +9,14 @@ declare const XLSX: any;
 const OrdersPage: React.FC = () => {
   const { orders, addOrders, updateOrderStatus, updateOrderPriority, autoUpdatePriorities } = useData();
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('All');
-  const [fileName, setFileName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'Pending' | 'Delivered'>('Pending');
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [priorityFilter, setPriorityFilter] = React.useState('All');
+  const [fileName, setFileName] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState<'Pending' | 'Delivered'>('Pending');
 
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -31,24 +31,49 @@ const OrdersPage: React.FC = () => {
         const workbook = XLSX.read(data, { type: 'array', cellDates:true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        if (json.length === 0) {
+            throw new Error("The uploaded file is empty or invalid.");
+        }
+
+        // Validate headers
+        const requiredHeaders = ['Customer Name', 'Product/Material', 'Quantity', 'Priority', 'Due Date', 'Destination'];
+        const firstRow = json[0];
+        const missingHeaders = requiredHeaders.filter(header => !(header in firstRow));
+        if (missingHeaders.length > 0) {
+            throw new Error(`Invalid file format. Missing required columns: ${missingHeaders.join(', ')}`);
+        }
         
-        const newOrders: Order[] = json.map((row: any) => ({
-          id: row['Order ID'] || `ORD-${Date.now()}-${Math.random()}`,
-          customerName: row['Customer Name'],
-          product: row['Product/Material'],
-          quantity: Number(row['Quantity']),
-          priority: row['Priority'],
-          dueDate: new Date(row['Due Date']).toISOString().split('T')[0],
-          destination: row['Destination'],
-          status: 'Pending',
-        }));
+        const newOrders: Order[] = json.reduce((acc: Order[], row: any) => {
+          // Basic row validation
+          if (row['Customer Name'] && row['Product/Material'] && row['Quantity'] && row['Priority'] && row['Due Date'] && row['Destination']) {
+            acc.push({
+                id: row['Order ID'] || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                customerName: row['Customer Name'],
+                product: row['Product/Material'],
+                quantity: Number(row['Quantity']),
+                priority: row['Priority'],
+                dueDate: new Date(row['Due Date']).toISOString().split('T')[0],
+                destination: row['Destination'],
+                status: 'Pending',
+            });
+          }
+          return acc;
+        }, []);
+
+        if (newOrders.length === 0) {
+            throw new Error("No valid orders could be parsed from the file. Please check the data.");
+        }
+
         addOrders(newOrders);
       } catch (err) {
-        setError('Failed to parse the file. Please check the format.');
+        setError(err instanceof Error ? err.message : 'An unknown error occurred during file processing.');
         console.error(err);
       } finally {
         setIsLoading(false);
+        // Reset file input to allow re-uploading the same file
+        if (e.target) e.target.value = '';
       }
     };
     reader.onerror = () => {
@@ -58,7 +83,7 @@ const OrdersPage: React.FC = () => {
     reader.readAsArrayBuffer(file);
   };
   
-  const filteredOrders = useMemo(() => {
+  const filteredOrders = React.useMemo(() => {
     return orders.filter(order => {
       const matchesSearch = Object.values(order).some(val =>
         val.toString().toLowerCase().includes(searchTerm.toLowerCase())
@@ -81,11 +106,12 @@ const OrdersPage: React.FC = () => {
             <span>Choose Excel File</span>
           </label>
           <input id="file-upload" type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} />
-          {fileName && <span className="text-gray-600">{fileName}</span>}
+          {fileName && !isLoading && !error && <span className="text-green-600">{fileName}</span>}
+          {fileName && error && <span className="text-red-600">{fileName}</span>}
           {isLoading && <span className="text-gray-600">Processing...</span>}
         </div>
         {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
-        <p className="text-xs text-gray-500 mt-2">Required columns: Order ID, Customer Name, Product/Material, Quantity, Priority, Due Date, Destination.</p>
+        <p className="text-xs text-gray-500 mt-2">Required columns: Order ID (optional), Customer Name, Product/Material, Quantity, Priority, Due Date, Destination.</p>
       </div>
 
       <div className="bg-white rounded-lg shadow-md">

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import * as React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { Role, Inventory, InventoryItem } from '../types';
@@ -10,7 +10,7 @@ const UpdateInventoryModal: React.FC<{
   onClose: () => void;
   onSave: (updates: { productName: string; newQuantity: number }[]) => void;
 }> = ({ inventory, onClose, onSave }) => {
-  const [updatedProducts, setUpdatedProducts] = useState<InventoryItem[]>(
+  const [updatedProducts, setUpdatedProducts] = React.useState<InventoryItem[]>(
     JSON.parse(JSON.stringify(inventory.products))
   );
 
@@ -67,11 +67,11 @@ const UpdateInventoryModal: React.FC<{
 const InventoryPage: React.FC = () => {
   const { user } = useAuth();
   const { inventories, updateInventory } = useData();
-  const [selectedBaseId, setSelectedBaseId] = useState<number | 'all'>(user?.role === Role.ADMIN ? 'all' : user?.baseId || 'all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [inventoryToEdit, setInventoryToEdit] = useState<Inventory | null>(null);
+  const [selectedBaseId, setSelectedBaseId] = React.useState<number | 'all'>(user?.role === Role.ADMIN ? 'all' : user?.baseId || 'all');
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [inventoryToEdit, setInventoryToEdit] = React.useState<Inventory | null>(null);
 
-  const displayInventories = useMemo(() => {
+  const displayInventories = React.useMemo(() => {
     if (user?.role === Role.BASE_MANAGER) {
       return inventories.filter(inv => inv.baseId === user.baseId);
     }

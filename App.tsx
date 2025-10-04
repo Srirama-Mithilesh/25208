@@ -1,5 +1,4 @@
-
-import React from 'react';
+import * as React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
@@ -12,6 +11,7 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import Layout from './components/Layout';
 import { Role } from './types';
+import LogisticsMapPage from './pages/LogisticsMapPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactElement; roles?: Role[] }> = ({ children, roles }) => {
   const { user } = useAuth();
@@ -41,11 +41,12 @@ const AppRoutes: React.FC = () => {
     return (
         <Layout>
             <Routes>
-                <Route path="/login" element={<LoginPage />} />
+                <Route path="/login" element={<Navigate to="/dashboard" />} />
                 <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute roles={[Role.ADMIN]}><OrdersPage /></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute roles={[Role.ADMIN, Role.BASE_MANAGER]}><InventoryPage /></ProtectedRoute>} />
                 <Route path="/planner" element={<ProtectedRoute roles={[Role.ADMIN, Role.BASE_MANAGER]}><PlannerPage /></ProtectedRoute>} />
+                <Route path="/map" element={<ProtectedRoute><LogisticsMapPage /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                 <Route path="/" element={<Navigate to="/dashboard" />} />
