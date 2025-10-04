@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Menu, LogOut, User as UserIcon, Bell, CheckCircle } from 'lucide-react';
+import { Menu, LogOut, User as UserIcon, Bell, CircleCheck as CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
