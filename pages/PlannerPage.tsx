@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext';
 import { BrainCircuit, Loader2, Info, Map, CheckCircle, Beaker, Send } from 'lucide-react';
 import { RakeSuggestion, Order, Inventory } from '../types';
 import { GoogleGenAI, Type } from "@google/genai";
+import { MOCK_PRODUCT_WAGON_COMPATIBILITY } from '../constants';
 import RouteModal from '../components/RouteModal';
 import ExplainabilityModal from '../components/ExplainabilityModal';
 import SimulationModal from '../components/SimulationModal';
@@ -39,26 +40,38 @@ const PlannerPage: FC = () => {
     
     const { rakeCapacity = 4000, priorityWeighting = 'balanced', highPriorityProduct, specificOrderIds } = simulationParams;
 
-    // Construct the prompt for the Gemini API
     const prompt = `
-      You are a logistics planning expert for a major steel authority. Your task is to create an optimal rake formation plan.
+      You are a logistics planning AI for a major steel authority. Your task is to create an optimal rake formation plan considering numerous complex constraints.
       
       **CONTEXT:**
       - A standard rake has a capacity of approximately ${rakeCapacity} tons.
       - Planning Strategy: ${priorityWeighting === 'high_priority_focus' ? 'Strongly prioritize orders with \'High\' priority, even if it results in lower rake utilization.' : 'Balance fulfilling high-priority orders with achieving high rake utilization.'}
       ${highPriorityProduct ? `- Give special consideration to fulfilling orders for the product: ${highPriorityProduct}.` : ''}
       ${specificOrderIds ? `- A user has requested that you prioritize including these specific Order IDs in your plan: ${specificOrderIds}. Please try to include them if feasible.` : ''}
-      - Aim for high rake utilization (close to 100%) but do not exceed capacity.
-      - Fulfill multiple orders in a single rake if they have the same destination and fit within capacity.
-      - Consider inventory levels at each base. A plan is only viable if the base has enough stock.
+      - A rake can carry products for multiple orders if they share the same destination. This is highly encouraged for efficiency.
+      
+      **HARD CONSTRAINTS (MUST BE FOLLOWED):**
+      - **Rake Availability:** Do not suggest more rakes from a base than are available.
+      - **Rake Capacity:** Total weight must not exceed ${rakeCapacity} tons.
+      - **Inventory Levels:** A plan is only viable if the source base has enough stock for ALL products in the suggested rake.
+      - **Product-Wagon Compatibility:** Products must be transported in compatible wagons. You are provided with a compatibility matrix. Assume a rake is composed of wagons suitable for the products it carries. If products in a single rake have no common wagon type, the plan is invalid.
 
       **INPUT DATA:**
 
-      **1. Pending Orders:**
+      **1. Pending Orders (Each order can have multiple products):**
       ${JSON.stringify(pendingOrders, null, 2)}
 
-      **2. Current Inventory:**
-      ${JSON.stringify(inventories, null, 2)}
+      **2. Current Inventory and Rake Availability per Base:**
+      ${JSON.stringify(inventories.map(({history, ...rest}) => rest), null, 2)}
+      
+      **3. Product-Wagon Compatibility Matrix:**
+      ${JSON.stringify(MOCK_PRODUCT_WAGON_COMPATIBILITY, null, 2)}
+
+      **SOFT CONSTRAINTS (TRY TO OPTIMIZE):**
+      - **High Utilization:** Aim for rake utilization close to 100%.
+      - **Priority Fulfillment:** Fulfill 'High' priority orders first.
+      - **Meet Deadlines:** Prioritize orders with closer due dates.
+      - **Customer Requirements:** Pay attention to 'specialRequirements' on orders.
 
       **TASK:**
       Generate a list of rake suggestions. For each suggestion, provide:
@@ -128,10 +141,9 @@ const PlannerPage: FC = () => {
       
       setRakePlans(plansWithStatus);
 
-      // Add a notification for plan generation
       if (plansWithStatus.length > 0) {
         const message = simulationParams.rakeCapacity || simulationParams.specificOrderIds ? `Generated ${plansWithStatus.length} new rake suggestions based on simulation.` : `Generated ${plansWithStatus.length} new rake suggestions.`;
-        addNotification(message, 0); // 0 for system/all bases
+        addNotification(message, 0); 
       }
 
     } catch (e) {
@@ -205,7 +217,6 @@ const PlannerPage: FC = () => {
         </div>
       )}
 
-      {/* Rake Suggestions */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold text-gray-800">Generated Rake Suggestions</h2>
         {rakePlans.length === 0 && !isLoading ? (

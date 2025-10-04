@@ -16,13 +16,13 @@ export interface User {
 export interface Order {
   id: string;
   customerName: string;
-  product: string;
-  quantity: number;
+  products: { name: string; quantity: number }[];
   priority: 'High' | 'Medium' | 'Low';
   dueDate: string;
   destination: string;
   status: 'Pending' | 'Delivered';
   assignedManagerId?: number;
+  specialRequirements?: string;
 }
 
 export interface InventoryItem {
@@ -43,6 +43,7 @@ export interface Inventory {
     lon: number;
     products: InventoryItem[];
     history: InventoryUpdate[];
+    availableRakes: number;
 }
 
 export interface RakeSuggestion {

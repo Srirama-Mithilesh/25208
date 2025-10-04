@@ -2,20 +2,25 @@ import { useState, useMemo, FC } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { Role, Inventory, InventoryItem } from '../types';
-import { Edit } from 'lucide-react';
+import { Edit, Train } from 'lucide-react';
 
 const UpdateInventoryModal: FC<{
   inventory: Inventory;
   onClose: () => void;
-  onSave: (updates: { productName: string; newQuantity: number }[]) => void;
+  onSave: (updates: { 
+      productUpdates?: { productName: string; newQuantity: number }[],
+      rakeUpdate?: number 
+  }) => void;
 }> = ({ inventory, onClose, onSave }) => {
   const [updatedProducts, setUpdatedProducts] = useState<InventoryItem[]>(
     JSON.parse(JSON.stringify(inventory.products))
   );
+  const [availableRakes, setAvailableRakes] = useState<number>(inventory.availableRakes);
+
 
   const handleQuantityChange = (productName: string, value: string) => {
     const newQuantity = parseInt(value, 10);
-    if (isNaN(newQuantity)) return;
+    if (isNaN(newQuantity) || newQuantity < 0) return;
 
     setUpdatedProducts(prev =>
       prev.map(p => (p.name === productName ? { ...p, quantity: newQuantity } : p))
@@ -23,13 +28,13 @@ const UpdateInventoryModal: FC<{
   };
 
   const handleSaveChanges = () => {
-    const changes = updatedProducts
-      .map((p, i) => ({ productName: p.name, newQuantity: p.quantity }))
+    const productUpdates = updatedProducts
+      .map(p => ({ productName: p.name, newQuantity: p.quantity }))
       .filter((p, i) => p.newQuantity !== inventory.products[i].quantity);
-    
-    if (changes.length > 0) {
-      onSave(changes);
-    }
+
+    const rakeUpdate = availableRakes !== inventory.availableRakes ? availableRakes : undefined;
+
+    onSave({ productUpdates, rakeUpdate });
     onClose();
   };
 
@@ -37,7 +42,7 @@ const UpdateInventoryModal: FC<{
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
         <h2 className="text-xl font-bold mb-4 text-gray-800">Update Inventory for {inventory.baseName}</h2>
-        <div className="space-y-4 max-h-96 overflow-y-auto">
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
           {updatedProducts.map(product => (
             <div key={product.name} className="flex items-center justify-between">
               <label className="text-gray-700">{product.name}</label>
@@ -49,6 +54,15 @@ const UpdateInventoryModal: FC<{
               />
             </div>
           ))}
+            <div className="flex items-center justify-between pt-4 border-t">
+              <label className="text-gray-700 font-medium">Available Rakes</label>
+              <input
+                type="number"
+                value={availableRakes}
+                onChange={e => setAvailableRakes(parseInt(e.target.value, 10) || 0)}
+                className="w-32 px-2 py-1 border rounded-md"
+              />
+            </div>
         </div>
         <div className="mt-6 flex justify-end space-x-3">
           <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
@@ -65,7 +79,7 @@ const UpdateInventoryModal: FC<{
 
 const InventoryPage: FC = () => {
   const { user } = useAuth();
-  const { inventories, updateInventory } = useData();
+  const { inventories, updateInventory, updateRakeAvailability } = useData();
   const [selectedBaseId, setSelectedBaseId] = useState<number | 'all'>(user?.role === Role.ADMIN ? 'all' : user?.baseId || 'all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inventoryToEdit, setInventoryToEdit] = useState<Inventory | null>(null);
@@ -83,9 +97,17 @@ const InventoryPage: FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = (updates: { productName: string; newQuantity: number }[]) => {
+  const handleSave = (updates: { 
+      productUpdates?: { productName: string; newQuantity: number }[],
+      rakeUpdate?: number 
+  }) => {
     if (inventoryToEdit) {
-      updateInventory(inventoryToEdit.baseId, updates);
+      if (updates.productUpdates && updates.productUpdates.length > 0) {
+        updateInventory(inventoryToEdit.baseId, updates.productUpdates);
+      }
+      if (updates.rakeUpdate !== undefined) {
+        updateRakeAvailability(inventoryToEdit.baseId, updates.rakeUpdate);
+      }
     }
   };
 
@@ -115,7 +137,7 @@ const InventoryPage: FC = () => {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             {inv.products.map(p => (
               <div key={p.name} className="bg-gray-50 p-4 rounded-md text-center">
                 <p className="text-sm text-gray-500">{p.name}</p>
@@ -123,6 +145,14 @@ const InventoryPage: FC = () => {
                 <p className="text-xs text-gray-400">Tons</p>
               </div>
             ))}
+            <div className="bg-blue-50 p-4 rounded-md text-center flex flex-col justify-center">
+                <p className="text-sm text-blue-500">Available Rakes</p>
+                <div className="flex items-center justify-center gap-2">
+                    <Train size={24} className="text-sail-blue" />
+                    <p className="text-2xl font-bold text-sail-blue">{inv.availableRakes}</p>
+                </div>
+                <p className="text-xs text-blue-400">Units</p>
+            </div>
           </div>
           <div>
              <h3 className="text-lg font-semibold text-gray-700 mb-2">Update History</h3>

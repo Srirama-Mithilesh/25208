@@ -2,7 +2,7 @@ import { useState, useMemo, FC, ChangeEvent } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { Order, Role } from '../types';
-import { Upload, Search, Truck, BrainCircuit } from 'lucide-react';
+import { Upload, Search, Truck, BrainCircuit, Info } from 'lucide-react';
 
 declare const XLSX: any;
 
@@ -39,7 +39,6 @@ const OrdersPage: FC = () => {
             throw new Error("The uploaded file is empty or invalid.");
         }
 
-        // Validate headers
         const requiredHeaders = ['Customer Name', 'Product/Material', 'Quantity', 'Priority', 'Due Date', 'Destination'];
         const firstRow = json[0];
         const missingHeaders = requiredHeaders.filter(header => !(header in firstRow));
@@ -47,34 +46,69 @@ const OrdersPage: FC = () => {
             throw new Error(`Invalid file format. Missing required columns: ${missingHeaders.join(', ')}`);
         }
         
-        const newOrders: Order[] = json.reduce((acc: Order[], row: any) => {
-          // Basic row validation
-          if (row['Customer Name'] && row['Product/Material'] && row['Quantity'] && row['Priority'] && row['Due Date'] && row['Destination']) {
-            acc.push({
-                id: row['Order ID'] || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                customerName: row['Customer Name'],
-                product: row['Product/Material'],
-                quantity: Number(row['Quantity']),
-                priority: row['Priority'],
-                dueDate: new Date(row['Due Date']).toISOString().split('T')[0],
-                destination: row['Destination'],
-                status: 'Pending',
-            });
-          }
-          return acc;
-        }, []);
+        const groupedOrders = new Map<string, any[]>();
+        const singleOrders: any[] = [];
 
-        if (newOrders.length === 0) {
+        json.forEach(row => {
+            if (row['Customer Order ID']) {
+                const id = row['Customer Order ID'].toString();
+                if (!groupedOrders.has(id)) {
+                    groupedOrders.set(id, []);
+                }
+                groupedOrders.get(id)!.push(row);
+            } else {
+                singleOrders.push(row);
+            }
+        });
+        
+        const parsedOrders: Order[] = [];
+
+        // Process multi-product orders
+        groupedOrders.forEach((rows, customerOrderId) => {
+            const firstRow = rows[0];
+            if (rows.some(r => !r['Product/Material'] || !r['Quantity'])) {
+                console.warn(`Skipping grouped order ${customerOrderId} due to missing product/quantity in some rows.`);
+                return;
+            }
+            parsedOrders.push({
+                id: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                customerName: firstRow['Customer Name'],
+                products: rows.map(r => ({ name: r['Product/Material'], quantity: Number(r['Quantity']) })),
+                priority: firstRow['Priority'],
+                dueDate: new Date(firstRow['Due Date']).toISOString().split('T')[0],
+                destination: firstRow['Destination'],
+                status: 'Pending',
+                specialRequirements: firstRow['Special Requirements'],
+            });
+        });
+
+        // Process single-product orders
+        singleOrders.forEach(row => {
+            if (row['Customer Name'] && row['Product/Material'] && row['Quantity'] && row['Priority'] && row['Due Date'] && row['Destination']) {
+                parsedOrders.push({
+                    id: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    customerName: row['Customer Name'],
+                    products: [{ name: row['Product/Material'], quantity: Number(row['Quantity']) }],
+                    priority: row['Priority'],
+                    dueDate: new Date(row['Due Date']).toISOString().split('T')[0],
+                    destination: row['Destination'],
+                    status: 'Pending',
+                    specialRequirements: row['Special Requirements'],
+                });
+            }
+        });
+
+
+        if (parsedOrders.length === 0) {
             throw new Error("No valid orders could be parsed from the file. Please check the data.");
         }
 
-        addOrders(newOrders);
+        addOrders(parsedOrders);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred during file processing.');
         console.error(err);
       } finally {
         setIsLoading(false);
-        // Reset file input to allow re-uploading the same file
         if (e.target) e.target.value = '';
       }
     };
@@ -87,9 +121,13 @@ const OrdersPage: FC = () => {
   
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
-      const matchesSearch = Object.values(order).some(val =>
-        val.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const searchString = searchTerm.toLowerCase();
+      const matchesSearch = 
+        order.id.toLowerCase().includes(searchString) ||
+        order.customerName.toLowerCase().includes(searchString) ||
+        order.destination.toLowerCase().includes(searchString) ||
+        order.products.some(p => p.name.toLowerCase().includes(searchString));
+
       const matchesPriority = priorityFilter === 'All' || order.priority === priorityFilter;
       const matchesStatus = order.status === activeTab;
       return matchesSearch && matchesPriority && matchesStatus;
@@ -113,7 +151,8 @@ const OrdersPage: FC = () => {
           {isLoading && <span className="text-gray-600">Processing...</span>}
         </div>
         {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
-        <p className="text-xs text-gray-500 mt-2">Required columns: Order ID (optional), Customer Name, Product/Material, Quantity, Priority, Due Date, Destination.</p>
+        <p className="text-xs text-gray-500 mt-2"><b>Required columns:</b> Customer Name, Product/Material, Quantity, Priority, Due Date, Destination.</p>
+        <p className="text-xs text-gray-500 mt-1"><b>Optional columns:</b> Customer Order ID (to group rows into one order), Special Requirements.</p>
       </div>
 
       <div className="bg-white rounded-lg shadow-md">
@@ -173,7 +212,7 @@ const OrdersPage: FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                 <tr>
-                    {['Order ID', 'Customer', 'Product', 'Quantity (T)', 'Priority', 'Due Date', 'Destination', 'Assigned Manager', 'Actions'].map(header => (
+                    {['Order ID', 'Customer', 'Products', 'Priority', 'Due Date', 'Destination', 'Assigned Manager', 'Actions'].map(header => (
                     <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{header}</th>
                     ))}
                 </tr>
@@ -181,12 +220,17 @@ const OrdersPage: FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                 {filteredOrders.map(order => {
                     const assignedManager = users.find(u => u.id === order.assignedManagerId);
+                    const totalQuantity = order.products.reduce((acc, p) => acc + p.quantity, 0);
                     return (
                         <tr key={order.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.id}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.customerName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.product}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.quantity.toLocaleString()}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs">
+                          <span className="font-semibold">{totalQuantity.toLocaleString()} T</span> total
+                          <ul className="list-disc pl-4 mt-1 text-xs">
+                           {order.products.map(p => <li key={p.name}>{p.name} ({p.quantity.toLocaleString()} T)</li>)}
+                          </ul>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {activeTab === 'Pending' && user?.role === Role.ADMIN ? (
                               <select
@@ -231,8 +275,13 @@ const OrdersPage: FC = () => {
                             )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            {order.specialRequirements && (
+                                <span title={order.specialRequirements} className="text-gray-400 hover:text-gray-600 inline-block align-middle">
+                                    <Info size={16} />
+                                </span>
+                            )}
                             {activeTab === 'Pending' && user?.role === Role.ADMIN && (
-                                <button onClick={() => updateOrderStatus(order.id, 'Delivered')} title="Mark as Delivered" className="text-green-600 hover:text-green-900"><Truck size={18} /></button>
+                                <button onClick={() => updateOrderStatus(order.id, 'Delivered')} title="Mark as Delivered" className="text-green-600 hover:text-green-900 inline-block align-middle"><Truck size={18} /></button>
                             )}
                             {activeTab === 'Delivered' && user?.role === Role.ADMIN && (
                                 <button onClick={() => updateOrderStatus(order.id, 'Pending')} title="Move to Pending" className="text-yellow-600 hover:text-yellow-900">Undo</button>

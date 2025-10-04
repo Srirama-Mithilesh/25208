@@ -11,6 +11,7 @@ interface DataContextType {
   setRakePlans: (plans: RakeSuggestion[]) => void;
   addOrders: (newOrders: Order[]) => void;
   updateInventory: (baseId: number, updates: { productName: string; newQuantity: number }[]) => void;
+  updateRakeAvailability: (baseId: number, newCount: number) => void;
   updateOrderStatus: (orderId: string, status: 'Pending' | 'Delivered') => void;
   updateOrderPriority: (orderId: string, priority: 'High' | 'Medium' | 'Low') => void;
   updateOrderAssignedManager: (orderId: string, managerId: number | null) => void;
@@ -156,6 +157,14 @@ export const DataProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
   }, [user]);
   
+  const updateRakeAvailability = (baseId: number, newCount: number) => {
+    setInventories(prevInventories => 
+        prevInventories.map(inv => 
+            inv.baseId === baseId ? { ...inv, availableRakes: newCount } : inv
+        )
+    );
+  };
+
   const dispatchRake = (rakeId: string) => {
       setRakePlans(prevPlans => prevPlans.map(p => {
           if (p.rakeId === rakeId) {
@@ -221,7 +230,7 @@ export const DataProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [rakePlans]);
 
   return (
-    <DataContext.Provider value={{ orders, inventories, notifications, rakePlans, setRakePlans, addOrders, updateInventory, updateOrderStatus, addNotification, markNotificationAsRead, updateOrderPriority, autoUpdatePriorities, markAllAsRead, dispatchRake, updateOrderAssignedManager }}>
+    <DataContext.Provider value={{ orders, inventories, notifications, rakePlans, setRakePlans, addOrders, updateInventory, updateOrderStatus, addNotification, markNotificationAsRead, updateOrderPriority, autoUpdatePriorities, markAllAsRead, dispatchRake, updateOrderAssignedManager, updateRakeAvailability }}>
       {children}
     </DataContext.Provider>
   );
