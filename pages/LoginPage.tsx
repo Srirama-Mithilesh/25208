@@ -27,7 +27,7 @@ const LoginPage: FC = () => {
             <div className="text-center space-y-2">
                 <div className="flex justify-center items-center gap-3">
                     <Sailboat size={48} className="text-sail-orange" />
-                    <h1 className="text-4xl font-extrabold text-sail-blue">SAIL DSS</h1>
+                    <h1 className="text-4xl font-extrabold text-sail-blue">RakeNet</h1>
                 </div>
                 <p className="text-gray-600">Rake Formation Decision Support</p>
             </div>
@@ -71,7 +71,7 @@ const LoginPage: FC = () => {
             </p>
         </div>
         <div className="text-center text-gray-300 mt-8 text-sm">
-             © 2025 Steel Authority of India – Decision Support System Prototype
+             © 2025 RakeNet – Decision Support System Prototype
         </div>
     </div>
   );

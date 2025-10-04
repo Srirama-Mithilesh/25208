@@ -49,7 +49,7 @@ const Sidebar: FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex items-center justify-between p-4 border-b border-blue-700">
           <div className="flex items-center gap-2">
             <Sailboat size={32} className="text-sail-orange" />
-            <h1 className="text-xl font-bold">SAIL DSS</h1>
+            <h1 className="text-xl font-bold">RakeNet</h1>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-300 hover:text-white">
             <X size={24} />
