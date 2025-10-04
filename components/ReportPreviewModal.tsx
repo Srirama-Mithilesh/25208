@@ -17,42 +17,76 @@ const ReportPreviewModal: FC<ReportPreviewModalProps> = ({ title, filtersUsed, c
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 printable-area-container">
         {/* We add a style tag to control printing, making it self-contained */}
         <style>
         {`
           @media print {
+            /* Hide everything on the page except for the printable area and its contents */
             body > *:not(.printable-area-container) {
               display: none !important;
             }
+
+            /* Ensure the printable container takes up the whole space for printing */
             .printable-area-container {
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              padding: 0;
-              margin: 0;
-              background: white;
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              overflow: visible !important;
+              background-color: #fff !important; /* Ensure background is white */
             }
+            
+            /* Style the report content itself for printing */
             .report-modal-content {
-               box-shadow: none !important;
-               border: none !important;
-               height: 100vh;
-               border-radius: 0;
+              box-shadow: none !important;
+              border: none !important;
+              border-radius: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important; /* Allow content to flow */
+              display: block !important; /* Override flex layout for natural flow */
             }
+
+            /* Force light theme colors on all elements within the report for print */
+            .report-modal-content, .report-modal-content * {
+                color: #000 !important;
+                background-color: transparent !important;
+            }
+
+            /* Hide the UI controls (buttons) */
             .report-controls {
               display: none !important;
             }
+
+            /* Improve page break behavior for tables */
+            table {
+              page-break-inside: auto;
+            }
+            tr {
+              page-break-inside: avoid;
+              page-break-after: auto;
+            }
+            thead {
+              display: table-header-group; /* Repeat table headers on each page */
+            }
+            tfoot {
+                display: table-footer-group;
+            }
+
+            /* Page setup for A4 paper with standard margins */
             @page {
               size: A4;
-              margin: 20mm;
+              margin: 1.5cm;
             }
           }
         `}
         </style>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl flex flex-col h-[90vh] printable-area-container report-modal-content">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl flex flex-col h-[90vh] report-modal-content">
         <div id="printable-area" className="flex-grow p-8 overflow-y-auto">
           {/* Report Header */}
           <header className="border-b-2 border-gray-800 dark:border-gray-400 pb-4 mb-6 text-gray-800 dark:text-gray-200">

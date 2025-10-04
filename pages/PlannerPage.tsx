@@ -48,13 +48,16 @@ const PlannerPage: FC = () => {
       - Planning Strategy: ${priorityWeighting === 'high_priority_focus' ? 'Strongly prioritize orders with \'High\' priority, even if it results in lower rake utilization.' : 'Balance fulfilling high-priority orders with achieving high rake utilization.'}
       ${highPriorityProduct ? `- Give special consideration to fulfilling orders for the product: ${highPriorityProduct}.` : ''}
       ${specificOrderIds ? `- A user has requested that you prioritize including these specific Order IDs in your plan: ${specificOrderIds}. Please try to include them if feasible.` : ''}
-      - A rake can carry products for multiple orders if they share the same destination. This is highly encouraged for efficiency.
+      - Combining multiple orders for the same destination into a single rake is highly encouraged for efficiency, provided all hard constraints are met.
       
       **HARD CONSTRAINTS (MUST BE FOLLOWED):**
       - **Rake Availability:** Do not suggest more rakes from a base than are available.
-      - **Rake Capacity:** Total weight must not exceed ${rakeCapacity} tons.
+      - **Rake Capacity & Weight Limits:** Total weight must not exceed ${rakeCapacity} tons. Assume different wagon types have different weight limits (e.g., Coil Wagon: 60 tons/wagon, Flat Wagon: 68 tons/wagon). The total load must be realistic for the required number of wagons.
       - **Inventory Levels:** A plan is only viable if the source base has enough stock for ALL products in the suggested rake.
       - **Product-Wagon Compatibility:** Products must be transported in compatible wagons. You are provided with a compatibility matrix. Assume a rake is composed of wagons suitable for the products it carries. If products in a single rake have no common wagon type, the plan is invalid.
+      - **Route Restrictions:** Some railway routes have restrictions (e.g., gauge limitations, single-line sections, electrification requirements, speed limits). You must assume these exist and generate plans that are plausible for a national rail network. For example, do not create a 3000km route for an order due in 2 days.
+      - **Multi-Order Deadline Adherence:** You can and should group multiple orders for the same destination into a single rake. However, this is ONLY permissible if the combined journey and delivery timeline does NOT cause ANY of the included orders to miss their respective 'dueDate'. This is a critical constraint.
+      - **Customer Requirements:** Any 'specialRequirements' listed on an order are mandatory and must be accommodated in the plan.
 
       **INPUT DATA:**
 
@@ -71,7 +74,6 @@ const PlannerPage: FC = () => {
       - **High Utilization:** Aim for rake utilization close to 100%.
       - **Priority Fulfillment:** Fulfill 'High' priority orders first.
       - **Meet Deadlines:** Prioritize orders with closer due dates.
-      - **Customer Requirements:** Pay attention to 'specialRequirements' on orders.
 
       **TASK:**
       Generate a list of rake suggestions. For each suggestion, provide:
