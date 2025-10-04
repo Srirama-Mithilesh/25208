@@ -35,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [dropdownRef]);
+  }, []);
 
   const handleLogout = () => {
     logout();
